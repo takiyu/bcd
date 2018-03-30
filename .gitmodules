@@ -10,6 +10,3 @@
 [submodule "ext/eigen"]
 	path = ext/eigen
 	url = https://github.com/libigl/eigen
-[submodule "ext/openexr"]
-	path = ext/openexr
-	url = https://github.com/openexr/openexr
