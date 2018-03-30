@@ -149,6 +149,12 @@ float *readMultiExr(const char *name, int *nx, int *ny, int *nch) {
         exit(-1);
     }
 
+    if (exr_header.tiled) {
+        printf("Error reading file: %s (tiled format is not implemented yet)\n",
+               name);
+        exit(-1);
+    }
+
     // 4. Parse
     const int width = exr_image.width;
     const int height = exr_image.height;
@@ -156,8 +162,22 @@ float *readMultiExr(const char *name, int *nx, int *ny, int *nch) {
     float *out_data = new float[width * height * n_ch];
     for (int i = 0; i < width * height; i++) {
         for (int c = 0; c < n_ch; c++) {
+            // Search input channel
+            char ch_name[10];
+            sprintf(ch_name, "Bin_%04d", c);
+            int src_c = 0;
+            for (; src_c < n_ch; src_c++) {
+                if (strcmp(exr_header.channels[c].name, ch_name) == 0) {
+                    break;
+                }
+            }
+            if (src_c == n_ch) {
+                printf("Error reading file: %s (no %s channel)\n", ch_name);
+                exit(-1);
+            }
+            // Copy
             out_data[i + c * width * height] =
-                reinterpret_cast<float **>(exr_image.images)[c][i];
+                reinterpret_cast<float **>(exr_image.images)[src_c][i];
         }
     }
 
@@ -194,12 +214,9 @@ void writeSingleExr(const float* r_pixels, const float* g_pixels,
     header.channels =
         (EXRChannelInfo *)malloc(sizeof(EXRChannelInfo) * header.num_channels);
     // Must be (A)BGR order, since most of EXR viewers expect this channel order.
-    strncpy(header.channels[0].name, "B", 255);
-    strncpy(header.channels[1].name, "G", 255);
-    strncpy(header.channels[2].name, "R", 255);
-    header.channels[0].name[strlen("B")] = '\0';
-    header.channels[1].name[strlen("G")] = '\0';
-    header.channels[2].name[strlen("R")] = '\0';
+    strncpy(header.channels[0].name, "B\0", 255);
+    strncpy(header.channels[1].name, "G\0", 255);
+    strncpy(header.channels[2].name, "R\0", 255);
 
     header.pixel_types = (int *)malloc(sizeof(int) * header.num_channels);
     header.requested_pixel_types =
@@ -252,7 +269,7 @@ void writeMultiExr(const float* const* pixel_ptrs, int width, int height, int n_
         header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_HALF;
 
         // Name
-        sprintf(header.channels[i].name, "%3d", i);
+        sprintf(header.channels[i].name, "Bin_%04d", i);
     }
 
     const char* err;
