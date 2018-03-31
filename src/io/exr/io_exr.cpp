@@ -313,14 +313,18 @@ void writeMultiImageEXR(const char *fileName, const float *zPixels, int width,
                         int height, int nchan) {
     std::vector<const float *> pixel_ptrs(nchan);
     for (int i = 0; i < nchan; i++) {
-        pixel_ptrs[i] = &zPixels[width * height * i];
+        pixel_ptrs[nchan - i - 1] = &zPixels[width * height * i];
     }
     writeMultiExr(&pixel_ptrs[0], width, height, nchan, fileName);
 }
 
 void writeMultiImageEXR(const char *fileName, const float * const * zPixels,
                         int width, int height, int nchan) {
-    writeMultiExr(zPixels, width, height, nchan, fileName);
+    std::vector<const float *> pixel_ptrs(nchan);
+    for (int i = 0; i < nchan; i++) {
+        pixel_ptrs[nchan - i - 1] = zPixels[i];
+    }
+    writeMultiExr(&pixel_ptrs[0], width, height, nchan, fileName);
 }
 
 float *readMultiImageEXR(const char fileName[], int *width, int *height,
